@@ -1,0 +1,38 @@
+#!/bin/bash
+
+. pn_lib
+
+chmod 400 ${privateKeyPath}
+
+serverIdentifier=$1
+commands=$2
+
+if [ -z "$serverIdentifier" ]
+then
+   echo "Cannot leave serverIdentifier empty!"
+else
+   server=`get_server $serverIdentifier`
+
+   if [ -z "$server" ]
+   then
+      echo "Could not find a server with the identifier '${serverIdentifier}' in ${libDir}/servers.txt!"
+   else
+      serverName=`get_server_name $server`
+      serverSshIp=`get_server_ssh_ip $server`
+         
+      if [ -z "$serverName" ] || [ -z "$serverSshIp" ]
+      then
+         echo "Server data syntax error '$server' in ${libDir}/servers.txt!"
+      else
+         if [ -z "${commands}" ]
+         then
+            echo "SSH into ${serverSshIp} [${serverName}]"
+            ssh -oStrictHostKeyChecking=no -i ${privateKeyPath} ubuntu@${serverSshIp}
+         else
+            # echo "SSH into ${serverSshIp} [${serverName}] and execute additional commands [${commands}]"
+            echo "SSH into ${serverSshIp} [${serverName}] and execute additional commands"
+            ssh -oStrictHostKeyChecking=no -i ${privateKeyPath} ubuntu@${serverSshIp} ${commands}
+         fi
+      fi
+   fi
+fi

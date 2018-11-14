@@ -1,0 +1,32 @@
+#!/bin/bash
+
+. pn_lib
+
+chmod 400 ${privateKeyPath}
+
+serverIdentifier=$1
+src=$2
+dst=$3
+
+if [ -z "$serverIdentifier" ] || [ -z "$src" ] || [ -z "$dst" ]
+then
+   echo "Expected 3 arguments: serverIdentifier, src, and dst!"
+else
+   server=`get_server $serverIdentifier`
+
+   if [ -z "$server" ]
+   then
+      echo "Could not find a server with the identifier '${serverIdentifier}' in ${libDir}/servers.txt!"
+   else
+      serverName=`get_server_name $server`
+      serverSshIp=`get_server_ssh_ip $server`
+         
+      if [ -z "$serverName" ] || [ -z "$serverSshIp" ]
+      then
+         echo "Server data syntax error '$server' in ${libDir}/servers.txt!"
+      else
+         echo "SCP ubuntu@$serverSshIp [${serverName}] src:$src -r dst:$dst"
+         scp -oStrictHostKeyChecking=no -i ${privateKeyPath} -r ubuntu@$serverSshIp:$src $dst
+      fi
+   fi
+fi

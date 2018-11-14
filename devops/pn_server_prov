@@ -1,0 +1,17 @@
+#!/bin/bash
+
+. pn_lib
+
+fileName=`get_file_name_from_path $0`
+serverNamesConcat=`get_script_instance_names $fileName`
+serverNames=(${serverNamesConcat//,/ })
+
+for s in ${serverNames[@]}
+do
+   pn_ssh ${s} "sudo su -c \"apt-get update;
+   timedatectl set-timezone Etc/UTC;
+   apt-get install default-jre -y;
+   exit;\";
+   mkdir pn;
+   sudo reboot;"
+done

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo "Fixing line endings..."
+
+# Relative directory
+dir=`dirname $0`
+
+# May try to fix line endings on folders, so ignore any errors about that because it will definitely fail on them due to folders being unlike normal files.
+shopt -s globstar
+for f in ${dir}/* ; do
+   sed -i -e 's/\r$//' ${f}
+   chmod +x ${f}
+   echo $f
+done
+
+. pn_lib
+
+echo "Done!"

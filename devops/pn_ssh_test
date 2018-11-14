@@ -1,0 +1,31 @@
+#!/bin/bash
+
+. pn_lib
+
+chmod 400 ${privateKeyPath}
+
+echo "TEST_SSH_READY"
+
+serverIdentifier=$1
+
+if [ -z "$serverIdentifier" ]
+then
+   echo "Cannot leave serverIdentifier empty!"
+else
+   server=`get_server $serverIdentifier`
+
+   if [ -z "$server" ]
+   then
+      echo "Could not find a server with the identifier '${serverIdentifier}' in ${libDir}/servers.txt!"
+   else
+      serverName=`get_server_name $server`
+      serverSshIp=`get_server_ssh_ip $server`
+         
+      if [ -z "$serverName" ] || [ -z "$serverSshIp" ]
+      then
+         echo "Server data syntax error '$server' in ${libDir}/servers.txt!"
+      else
+         echo `ssh -oStrictHostKeyChecking=no -i ${privateKeyPath} ubuntu@${serverSshIp} "echo \"PN_SSH_READY\""`
+      fi
+   fi
+fi

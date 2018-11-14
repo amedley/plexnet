@@ -1,0 +1,169 @@
+#!/bin/bash
+
+libDir=`dirname ${0}`
+
+pnDir="${libDir}/../"
+devopsPath="${pnDir}/devops"
+devopsDir="${devopsPath}/"
+scriptsDir="${devopsDir}/"
+scriptInstanceNamesPath="${scriptsDir}/script_instance_names.txt"
+serversPath="${scriptsDir}/servers.txt"
+privateKeyPath="${devopsPath}/pn.pem"
+
+# Expects the identifier to be arg 1 and the file path to be arg 2
+function get_line_for_matching_word() {
+   local found=false
+   local identifier=`trim ${1}`
+   local filePath="$2"
+   while IFS= read -r line
+   do
+      if [ "${line:0:1}" = '#' ]
+      then
+         continue
+      fi
+
+      for word in $line
+      do
+         local sv=(${word//=/ })
+         local value=${sv[1]}
+         if [ "$value" = "$identifier" ]
+         then
+            found=true
+            i=-1
+            local dataString=""
+            for data in $line
+            do
+               i=$((i+1))
+               if [ "$i" -gt "0" ]
+               then
+                  dataString="${dataString} $data"
+               else
+                  dataString="$data"
+               fi
+            done
+            echo $dataString
+         fi
+         if [ "$found" = "true" ]
+         then
+               break
+         fi
+      done
+
+      if [ "$found" = "true" ]
+      then
+         break
+      fi
+   done < "$filePath"
+}
+
+# Echos out the value using a key assuming the arguments after the key are in key value pairs with
+# equals signs. The set of potential key values pairs must go after the targetted key. The targetted
+# key must be the 1st arg.
+function get_value() {
+   i=0
+   for val in $@
+   do
+      if [ $i = 0 ]
+      then
+         ((i++))
+         continue
+      fi
+      data=(${val//=/ })
+      if [ "${data[0]}" = "$1" ]
+      then
+         echo ${data[1]}
+         break
+      fi
+      ((i++))
+   done
+}
+
+# Echos the properties of a server from servers.txt by associating the 1st index of user input with one of the properties
+function get_server() {
+   echo `get_line_for_matching_word $1 ${serversPath}`
+}
+
+# Takes a string echoed out by get_server and parses the server name
+function get_server_name() {
+   echo `get_value SERVER_NAME $@`
+}
+
+# Takes a string echoed out by get_server and parses the ssh ip
+function get_server_ssh_ip() {
+   echo `get_value SSH_IP $@`
+}
+
+# Takes a string echoed out by get_server and parses the access ip
+function get_server_access_ip() {
+   echo `get_value ACCESS_IP $@`
+}
+
+# Takes a string echoed out by get_server and parses the listen ip
+function get_server_listen_ip() {
+   echo `get_value LISTEN_IP $@`
+}
+
+# Takes a string echoed out by get_server and parses the access port
+function get_server_access_port() {
+   echo `get_value ACCESS_PORT $@`
+}
+
+# Takes a string echoed out by get_server and parses the listen port
+function get_server_listen_port() {
+   echo `get_value LISTEN_PORT $@`
+}
+
+# Takes a string echoed out by get_server and parses the node environment
+function get_server_env() {
+   echo `get_value ENV $@`
+}
+
+# Takes the name of a script and echoes out the names of all instances that should be used by the script. The names are formatted as comma separated.
+function get_script_instance_names() {
+   local names=()
+   local found=false
+   while IFS= read -r line
+   do
+      if [ "${line:0:1}" = '#' ]
+      then
+         continue
+      fi
+
+      if [ "${line:0:1}" = '[' ]
+      then
+         if [ "$found" = "true" ]
+         then
+            break
+         fi
+         if [[ "$line" = *"$1"* ]]
+         then
+            found=true
+            continue
+         fi
+      fi
+
+      if [ "$found" = "true" ] && ! [ -z "$line" ]
+      then
+         names[${#names[@]}]=$line
+      fi
+   done < "$scriptInstanceNamesPath"
+   local i=-1
+   local namesConcat=""
+   for name in ${names[@]}
+   do
+      ((i++))
+      if [ "$i" -gt "0" ]
+      then
+         namesConcat=${namesConcat},${name}
+      else
+         namesConcat=$name
+      fi
+   done
+   echo $namesConcat
+}
+
+# Takes the path to a file and parses the file name
+function get_file_name_from_path() {
+   local pathSteps=(${1//'/'/ });
+   echo ${pathSteps[$((${#pathSteps[@]}-1))]}
+}

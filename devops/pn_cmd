@@ -1,0 +1,5 @@
+#!/bin/bash
+
+TASKS_PATH="$PNSCRIPTS/conemu_tasks.txt"
+cd "C:\Program Files\ConEmu"
+./ConEmu64.exe /run @$TASKS_PATH &

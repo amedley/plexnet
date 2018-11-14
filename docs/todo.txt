@@ -1,0 +1,4 @@
+
+✔ Set up devops scripts so we can interact with linux servers @done(Tuesday, 2018/11/13 10:36 pm)
+✔ Create basic project structure and get on GitHub @done(Tuesday, 2018/11/13 10:36 pm)
+✔ Test provisioning a server with JRE @done(Tuesday, 2018/11/13 10:37 pm)

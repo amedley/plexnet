@@ -1,0 +1,24 @@
+#!/bin/bash
+
+. pn_lib
+
+echo $pnDir
+echo $privateKeyPath
+
+server=`get_server gameserv0`
+serverName=`get_server_name $server`
+serverSshIp=`get_server_ssh_ip $server`
+serverAccessIp=`get_server_access_ip $server`
+serverListenPort=`get_server_listen_port $server`
+serverAccessPort=`get_server_access_port $server`
+serverListenIp=`get_server_listen_ip $server`
+
+echo $server
+echo $serverName
+echo $serverSshIp
+echo $serverAccessIp
+echo $serverListenPort
+echo $serverAccessPort
+echo $serverListenIp
+
+# END

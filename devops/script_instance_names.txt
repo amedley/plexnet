@@ -1,0 +1,6 @@
+# Instance names. For example, pnserver_prov will provision server tools to all the servers whose names are under "[pn_server_prov]".
+
+[pn_server_prov]
+
+[pn_libtest]
+

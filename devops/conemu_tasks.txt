@@ -1,0 +1,3 @@
+>D:/cygwin64/bin/bash.exe -cur_console:t:"pn" -cur_console:d:"%PN%"
+D:/cygwin64/bin/bash.exe -cur_console:t:"run" -cur_console:d:"%PN%"
+
