@@ -2,3 +2,9 @@
 ✔ Set up devops scripts so we can interact with linux servers @done(Tuesday, 2018/11/13 10:36 pm)
 ✔ Create basic project structure and get on GitHub @done(Tuesday, 2018/11/13 10:36 pm)
 ✔ Test provisioning a server with JRE @done(Tuesday, 2018/11/13 10:37 pm)
+✔ Create a script that allows us to run PNServer using the command line @started(Saturday, 2018/11/17 04:52 am) @done(Saturday, 2018/11/17 08:48 am)
+✔ Custom command line arguments to PNServer and PNClient @done(Saturday, 2018/11/17 08:48 am)
+✔ Test connecting PNClient to PNServer @done(Saturday, 2018/11/17 08:48 am)
+✔ Write utility methods for logging @done(Saturday, 2018/11/17 08:49 am)
+☐ Write admin commands API so we can write to stdin
+
