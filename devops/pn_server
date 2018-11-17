@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. pn_lib
+
+# For now we will just run on localhost and pass in all arguments
+# In the future when this script must process exclusive arguments, change the index on "${@:i}" to prevent passing them
+# to the program
+java -cp $PN/pn/out/production/pn com.medleystudios.pn.server.PNServer "${@:1}"
