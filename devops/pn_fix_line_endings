@@ -13,6 +13,9 @@ for f in ${dir}/* ; do
    echo $f
 done
 
-. pn_lib
+gradle_loc="$PN/pn/gradlew"
+sed -i -e 's/\r$//' ${gradle_loc}
+chmod +x ${gradle_loc}
+echo ${gradle_loc}
 
 echo "Done!"
