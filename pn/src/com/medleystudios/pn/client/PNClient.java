@@ -1,5 +1,6 @@
 package com.medleystudios.pn.client;
 
+import com.medleystudios.pn.PN;
 import com.medleystudios.pn.conn.PNConnection;
 import com.medleystudios.pn.io.PNInputStreamReader;
 import com.medleystudios.pn.io.PNOutputStreamWriter;
@@ -33,7 +34,7 @@ public class PNClient implements Runnable {
    private PNClient(PNClientRunArguments runArguments) {
       this.runArguments = runArguments;
 
-      PNUtil.log(this, "" + runArguments);
+      PN.log(this, "" + runArguments);
 
       // Process run arguments
       this.host = this.runArguments.getHost();
@@ -51,7 +52,7 @@ public class PNClient implements Runnable {
    }
 
    private synchronized void start() {
-      PNUtil.log(this, "Establishing client connection with endpoint " + this.host + ":" + this.port);
+      PN.log(this, "Establishing client connection with endpoint " + this.host + ":" + this.port);
       this.setState(ClientState.ESTABLISHING_CONNECTION);
       PNConnection.connect(this.host, this.port)
          .thenAccept((socketResolver) -> {
@@ -59,12 +60,12 @@ public class PNClient implements Runnable {
                if (socketResolver.didSucceed()) {
                   Socket clientSocket = socketResolver.getSocket();
                   this.connection = await(PNConnection.get(clientSocket));
-                  PNUtil.log("Connection established: " + this.connection);
+                  PN.log("Connection established: " + this.connection);
                   this.setState(ClientState.CONNECTED);
                }
                else {
                   this.errorMessage = socketResolver.getErrorMessage();
-                  PNUtil.log("Failed to establish connection: " + this.errorMessage);
+                  PN.log("Failed to establish connection: " + this.errorMessage);
                   this.setState(ClientState.FAILED_TO_CONNECT);
                }
             }
@@ -79,18 +80,18 @@ public class PNClient implements Runnable {
             Thread.sleep(2);
          }
          catch (InterruptedException e) {
-            PNUtil.fatalError(e, "Failed to sleep thread");
+            PN.fatalError(e, this, "Failed to sleep thread");
          }
 
          synchronized (this) {
             if (isInitializing()) continue;
             if (isEstablishingConnection()) continue;
             if (!isConnected()) {
-               PNUtil.log("Client no longer connected! Exiting...");
+               PN.log("Client no longer connected! Exiting...");
                break;
             }
             if (!checkConnection()) {
-               PNUtil.log("Client connection checks failed! Exiting...");
+               PN.log("Client connection checks failed! Exiting...");
                break;
             }
 
@@ -99,7 +100,7 @@ public class PNClient implements Runnable {
 
             i++;
             if (i % 1000 == 0) {
-               PNUtil.log("CLIENT: " + this.connection);
+               PN.log("CLIENT: " + this.connection);
             }
          }
       }
@@ -114,11 +115,11 @@ public class PNClient implements Runnable {
       if (this.connection.isClosed()) {
          if (this.connection.getReader().didReachEnd()) {
             setState(ClientState.DISCONNECTED_ORDERLY);
-            PNUtil.log(this, "Client disconnected ORDERLY");
+            PN.log(this, "Client disconnected ORDERLY");
          }
          else {
             setState(ClientState.DISCONNECTED_ABORTIVE);
-            PNUtil.log(this, "Client disconnected ABORTIVE");
+            PN.log(this, "Client disconnected ABORTIVE");
          }
 
          return false;

@@ -1,5 +1,6 @@
 package com.medleystudios.pn.io;
 
+import com.medleystudios.pn.PN;
 import com.medleystudios.pn.util.PNUtil;
 
 import java.io.IOException;
@@ -91,10 +92,10 @@ public class PNInputStreamReader implements Runnable {
                // One of the reasons an IOException may have been thrown is if we intentionally closed the stream
                // We have to check if this stream ran close()
                if (isClosed()) {
-                  PNUtil.log(this, "InputStream.read stopped blocking due to intentional close.");
+                  PN.log(this, "InputStream.read stopped blocking due to intentional close.");
                }
                else {
-                  PNUtil.error(errorIO, this, "Failed to read data! Closing input stream.");
+                  PN.error(errorIO, this, "Failed to read data! Closing input stream.");
                   this.setErrorMessage(errorIO.getMessage());
                   this.close();
                }
@@ -104,7 +105,7 @@ public class PNInputStreamReader implements Runnable {
                // successful read
                if (read == -1) {
                   // reached end of stream
-                  PNUtil.log(this, "Reached end of input stream! Closing input stream.");
+                  PN.log(this, "Reached end of input stream! Closing input stream.");
                   this.reachedEnd = true;
                   this.close();
                   return true;
@@ -128,7 +129,7 @@ public class PNInputStreamReader implements Runnable {
                   for (int i = 0; i < chunks.length; i++) {
                      chunks[i] = this.chunks.get(i);
                   }
-                  PNUtil.log(this, "Received bytes [len: " + read + ", data: " + PNUtil.toString(chunks) + "]");
+                  PN.log(this, "Received bytes [len: " + read + ", data: " + PNUtil.toString(chunks) + "]");
                   return true;
                }
             }
@@ -196,7 +197,7 @@ public class PNInputStreamReader implements Runnable {
                this.in.close();
             }
             catch (IOException e) {
-               PNUtil.error(e, this, "Failed to close input stream.");
+               PN.error(e, this, "Failed to close input stream.");
             }
          }
 

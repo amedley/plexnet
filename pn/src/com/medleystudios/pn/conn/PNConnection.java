@@ -1,5 +1,6 @@
 package com.medleystudios.pn.conn;
 
+import com.medleystudios.pn.PN;
 import com.medleystudios.pn.io.PNInputStreamReader;
 import com.medleystudios.pn.io.PNOutputStreamWriter;
 import com.medleystudios.pn.util.PNUtil;
@@ -37,7 +38,7 @@ public class PNConnection {
             return new ServerSocketResolver(serverSocket);
          }
          catch (IOException e) {
-            PNUtil.error(e, "Failed to host server " + host + ":" + port);
+            PN.error(e, "Failed to host server " + host + ":" + port);
             return new ServerSocketResolver(e.getMessage());
          }
       });
@@ -54,7 +55,7 @@ public class PNConnection {
             return new SocketResolver(clientSocket);
          }
          catch (IOException e) {
-            PNUtil.error(e, "Failed to connect to " + host + ":" + port);
+            PN.error(e, "Failed to connect to " + host + ":" + port);
             return new SocketResolver(e.getMessage());
          }
       });
@@ -87,14 +88,14 @@ public class PNConnection {
          in = this.socket.getInputStream();
       }
       catch (IOException e) {
-         PNUtil.fatalError(e, this, "Failed to get socket input stream " + this.socket);
+         PN.fatalError(e, this, "Failed to get socket input stream " + this.socket);
       }
 
       try {
          out = this.socket.getOutputStream();
       }
       catch (IOException e) {
-         PNUtil.fatalError(e, this, "Failed to get socket output stream " + this.socket);
+         PN.fatalError(e, this, "Failed to get socket output stream " + this.socket);
       }
 
       this.inReader = new PNInputStreamReader(in, () -> {
@@ -105,7 +106,7 @@ public class PNConnection {
                return;
             }
 
-            PNUtil.log(this, this + " Reader closed! Closing connection");
+            PN.log(this, this + " Reader closed! Closing connection");
             this.close();
          }
       });
@@ -117,7 +118,7 @@ public class PNConnection {
                return;
             }
 
-            PNUtil.log(this, this + " Writer closed! Closing connection");
+            PN.log(this, this + " Writer closed! Closing connection");
             this.close();
          }
       });
@@ -156,13 +157,13 @@ public class PNConnection {
     * Attempts to disconnect in an orderly fashion. If that fails, the connection is closed abortive.
     */
    public synchronized void disconnect() {
-      PNUtil.log(this, "Issuing disconnect on: " + this.socket);
+      PN.log(this, "Issuing disconnect on: " + this.socket);
       if (!orderlyRelease()) {
-         PNUtil.log(this, "Orderly connection release failed! Closing connection abortive: " + this.socket);
+         PN.log(this, "Orderly connection release failed! Closing connection abortive: " + this.socket);
          this.close();
       }
       else {
-         PNUtil.log(this, "Successfully disconnected: " + this.socket);
+         PN.log(this, "Successfully disconnected: " + this.socket);
       }
    }
 
@@ -173,7 +174,7 @@ public class PNConnection {
          this.socket.shutdownOutput();
       }
       catch (IOException e) {
-         PNUtil.error(e, this, "Failed to shut down output stream!");
+         PN.error(e, this, "Failed to shut down output stream!");
          return false;
       }
 
@@ -185,23 +186,23 @@ public class PNConnection {
          if (this.isClosed()) return;
          this.closed = true;
 
-         PNUtil.log(this, "[CLOSE " + this + "] Closing connection...");
+         PN.log(this, "[CLOSE " + this + "] Closing connection...");
 
-         PNUtil.log(this, "[CLOSE " + this + "] Closing reader...");
+         PN.log(this, "[CLOSE " + this + "] Closing reader...");
          this.inReader.close(false);
 
-         PNUtil.log(this, "[CLOSE " + this + "] Closing writer...");
+         PN.log(this, "[CLOSE " + this + "] Closing writer...");
          this.outWriter.close(false);
 
-         PNUtil.log(this, "[CLOSE " + this + "] Closing socket...");
+         PN.log(this, "[CLOSE " + this + "] Closing socket...");
          try {
             this.socket.close();
          }
          catch (IOException e) {
-            PNUtil.error(e, this, "Failed to close socket when closing connection!");
+            PN.error(e, this, "Failed to close socket when closing connection!");
          }
 
-         PNUtil.log(this, "[CLOSE " + this + "] Getting error message IO if one exists...");
+         PN.log(this, "[CLOSE " + this + "] Getting error message IO if one exists...");
          if (this.inReader.getErrorMessage() != null) {
             this.errorMessageIO = this.inReader.getErrorMessage();
          }
@@ -209,7 +210,7 @@ public class PNConnection {
             this.errorMessageIO = this.outWriter.getErrorMessage();
          }
 
-         PNUtil.log(this, "[CLOSE " + this + "] Finished!");
+         PN.log(this, "[CLOSE " + this + "] Finished!");
       }
    }
 

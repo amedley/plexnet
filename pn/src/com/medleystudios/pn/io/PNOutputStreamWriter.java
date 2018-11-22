@@ -1,5 +1,6 @@
 package com.medleystudios.pn.io;
 
+import com.medleystudios.pn.PN;
 import com.medleystudios.pn.util.PNUtil;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class PNOutputStreamWriter implements Runnable {
             Thread.sleep(2);
          }
          catch (InterruptedException e) {
-            PNUtil.fatalError(e, this, "Unable to sleep thread");
+            PN.fatalError(e, this, "Unable to sleep thread");
          }
 
          synchronized (this) {
@@ -88,7 +89,7 @@ public class PNOutputStreamWriter implements Runnable {
                   }
                }
                catch (IOException e) {
-                  PNUtil.error(e, this, "Failed to write data! Closing output stream.");
+                  PN.error(e, this, "Failed to write data! Closing output stream.");
                   this.setErrorMessage(e.getMessage());
                   this.close();
                   break;
@@ -100,7 +101,7 @@ public class PNOutputStreamWriter implements Runnable {
                   this.out.flush();
                }
                catch (IOException e) {
-                  PNUtil.error(e, this, "Failed to flush data! Closing output stream.");
+                  PN.error(e, this, "Failed to flush data! Closing output stream.");
                   this.setErrorMessage(e.getMessage());
                   this.close();
                }
@@ -168,7 +169,7 @@ public class PNOutputStreamWriter implements Runnable {
                this.out.close();
             }
             catch (IOException e) {
-               PNUtil.error(e, this, "Failed to close output stream.");
+               PN.error(e, this, "Failed to close output stream.");
             }
          }
 
