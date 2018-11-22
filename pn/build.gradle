@@ -1,0 +1,41 @@
+repositories {
+   mavenLocal()
+   mavenCentral()
+   maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+   maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+   jcenter()
+}
+
+apply plugin: "idea"
+apply plugin: "java"
+
+sourceCompatibility = 1.8
+sourceSets.main.java.srcDirs = [ "src/" ]
+
+dependencies {
+   compile "com.ea.async:ea-async:1.2.1"
+}
+
+task buildserver(type: Jar) {
+   from files(sourceSets.main.output.classesDir)
+   from files(sourceSets.main.output.resourcesDir)
+   from {configurations.compile.collect {zipTree(it)}}
+
+   baseName = 'server'
+
+   manifest {
+      attributes 'Main-Class': 'com.medleystudios.pn.server.PNServer'
+   }
+}
+
+task buildclient(type: Jar) {
+   from files(sourceSets.main.output.classesDir)
+   from files(sourceSets.main.output.resourcesDir)
+   from {configurations.compile.collect {zipTree(it)}}
+
+   baseName = 'client'
+
+   manifest {
+      attributes 'Main-Class': 'com.medleystudios.pn.client.PNClient'
+   }
+}

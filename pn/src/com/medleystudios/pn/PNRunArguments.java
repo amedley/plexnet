@@ -1,6 +1,6 @@
 package com.medleystudios.pn;
 
-import com.medleystudios.pn.server.PNServerRunArguments;
+import com.medleystudios.pn.util.PNUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +63,7 @@ public class PNRunArguments {
 
       public void read(String[] args) {
          if (location < 0 || location >= args.length) {
-            PNUtil.fatalError(new RuntimeException(), "Unable to locate run argument: " + this + ". Args with length " + args.length + ": [" + String.join(", " +
+            PN.fatalError(new RuntimeException(), this, "Unable to locate run argument: " + this + ". Args with length " + args.length + ": [" + String.join(", " +
                "", args) + "]");
             return;
          }
@@ -95,7 +95,7 @@ public class PNRunArguments {
 
       private void testParseFailedOnCriticalType(ArgumentType argType, RuntimeException e) {
          if (this.type == argType) {
-            PNUtil.fatalError(e, this, "Failed to parse run argument with critical type: " + this);
+            PN.fatalError(e, this, "Failed to parse run argument with critical type: " + this);
          }
       }
 

@@ -2,7 +2,17 @@
 
 . pn_lib
 
+# build classes
+$PN/pn/gradlew -p=$PN/pn build
+
+# build the server lib
+$PN/pn/gradlew -p=$PN/pn buildserver
+
+if [ $? -ne 0 ]; then
+   exit
+fi
+
 # For now we will just run on localhost and pass in all arguments
 # In the future when this script must process exclusive arguments, change the index on "${@:i}" to prevent passing them
 # to the program
-java -cp $PN/pn/out/production/pn com.medleystudios.pn.server.PNServer "${@:1}"
+java -javaagent:"$PN/ea-async-lib/ea-async-1.2.1.jar" -cp "$PN/pn/build/libs/server.jar" com.medleystudios.pn.server.PNServer "${@:1}"
