@@ -7,4 +7,172 @@
 ✔ Test connecting PNClient to PNServer @done(Saturday, 2018/11/17 08:48 am)
 ✔ Write utility methods for logging @done(Saturday, 2018/11/17 08:49 am)
 ☐ Write admin commands API so we can write to stdin
+✔ Distinguish connection release in terms of "abortive" and "orderly". Implement both forms of connection release. @done(Thursday, 2018/11/22 01:01 pm)
+   https://docs.oracle.com/javase/8/docs/technotes/guides/net/articles/connection_release.html
 
+   Situation:
+      One connection between two machines. Machine A (MA) and Machine B (MB).
+      FIN denotes a message that indicates orderly release. Short for "Finish".
+      RST denotes a message that indicates abortive release. Short for "Reset".
+
+   Orderly connection release:
+      The connection is open on both ends
+      State:
+         MA-OUT   ON
+         MA-IN    ON
+         MB-OUT   ON
+         MB-IN    ON
+
+         Both ends of the connection are aware that all streams are  ON
+
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      MA decides to stop sending data and sends FIN to MB
+      State:
+         MA-OUT   OFF
+         MA-IN    ON
+         MB-OUT   ON
+         MB-IN    ON
+
+         MA is aware MA-OUT is   OFF
+
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      MB receives this message in the form of further byte-reads returning -1
+      State: 
+         MA-OUT   OFF
+         MA-IN    ON
+         MB-OUT   ON
+         MB-IN    ON
+
+         MA+MB are aware that MA-OUT is   OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      MB then acknowledges MA's FIN message by sending FIN back to MA.
+      State: 
+         MA-OUT   OFF
+         MA-IN    ON
+         MB-OUT   OFF
+         MB-IN    ON
+         
+         MA+MB are aware that MA-OUT is   OFF
+         MB is aware that     MB-OUT is   OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+         
+      MA receives MB's FIN in the form of further byte-reads returning -1
+      State: 
+         MA-OUT   OFF
+         MA-IN    ON
+         MB-OUT   OFF
+         MB-IN    ON
+         
+         MA+MB are aware that MA-OUT is   OFF
+         MB+MA is aware that  MB-OUT is   OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+      
+      MA closes the socket. MA stops managing the connection.
+      State: 
+         MA-OUT   OFF
+         MA-IN    OFF
+         MB-OUT   OFF
+         MB-IN    ON
+         
+         MA+MB are aware that MA-OUT is   OFF
+         MB+MA is aware that  MB-OUT is   OFF
+         MA is aware that     MA-IN is    OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+      
+      MB receives an RST because MA closed the socket
+      State:
+         MA-OUT   OFF
+         MA-IN    OFF
+         MB-OUT   OFF
+         MB-IN    OFF (Receiving RST automatically closes both IN and OUT)
+
+         MA+MB are aware that MA-OUT is   OFF
+         MB+MA is aware that  MB-OUT is   OFF
+         MA+MB are aware that MA-IN is    OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      Out of precaution, MB also closes the socket. MB stops managing its end of the connection.
+      State:
+         MA-OUT   OFF
+         MA-IN    OFF
+         MB-OUT   OFF
+         MB-IN    OFF
+
+         MA+MB are aware that MA-OUT is   OFF
+         MB+MA is aware that  MB-OUT is   OFF
+         MA+MB are aware that MA-IN is    OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+      
+      ✘ Implementation @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+   Abortive connection release:
+      The connection is open on both ends
+      State:
+         MA-OUT   ON
+         MA-IN    ON
+         MB-OUT   ON
+         MB-IN    ON
+
+         Both ends of the connection are aware that all streams are  ON
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      MA closes the socket and sends RST to MB. MA stops managing its end of the connection.
+      State:
+         MA-OUT   OFF
+         MA-IN    OFF
+         MB-OUT   ON
+         MB-IN    ON
+
+         MA is aware that MA-OUT is OFF
+         MA is aware that MA-IN is  OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      MB receives RST from MA because MA closed the socket
+      State:
+         MA-OUT   OFF
+         MA-IN    OFF
+         MB-OUT   OFF (Receiving RST automatically closes both IN and OUT)
+         MB-IN    OFF (Receiving RST automatically closes both IN and OUT)
+
+         MA+MB is aware that MA-OUT is OFF
+         MA+MB is aware that MA-IN is  OFF
+         MB is aware that MB-OUT is    OFF
+         MB is aware that MB-IN is     OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      Out of precaution, MB also closes the socket. MB stops managing its end of the connection.
+      State:
+         MA-OUT   OFF
+         MA-IN    OFF
+         MB-OUT   OFF
+         MB-IN    OFF
+
+         MA+MB is aware that MA-OUT is OFF
+         MA+MB is aware that MA-IN is  OFF
+         MB is aware that MB-OUT is    OFF
+         MB is aware that MB-IN is     OFF
+         
+         ✘ Test @cancelled(Thursday, 2018/11/22 01:02 pm)
+      
+      ✘ Implementation @cancelled(Thursday, 2018/11/22 01:02 pm)
+
+      UPDATE [2018/11/22 at 13:02 ET]:
+         As I began implementing Orderly connection release and Abortive connection release via the "TCP half-close" method, I realized that this is the wrong technical direction for PlexNet. Given that the servers are entirely authoritative, we don't need to use the half-close method. I chose instead to go with the method where we consume all input data before closing the socket. See the "consume" implementation in PNInputStreamReader.
+         ✔ Implementation @done(Thursday, 2018/11/22 01:04 pm)
+
+☐ Send and receive large sets of data using chunking
+   "large" means larger than the Ethernet MTU standard would support for a single TCP payload, which is 1500 bytes, so > 1500 b
+
+☐ Packets

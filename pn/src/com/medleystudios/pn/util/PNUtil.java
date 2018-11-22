@@ -1,4 +1,6 @@
-package com.medleystudios.pn;
+package com.medleystudios.pn.util;
+
+import com.medleystudios.pn.PN;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -12,15 +14,6 @@ import java.util.List;
 import java.util.TimeZone;
 
 public class PNUtil {
-
-   public static TimeZone tz = TimeZone.getTimeZone("UTC");
-
-   // Quoted "Z" to indicate UTC, no timezone offset
-   public static DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-
-   static {
-      df.setTimeZone(tz);
-   }
 
    public static <T extends Object> String toString(List<T> list, String indent) {
       String result = "[";
@@ -87,47 +80,6 @@ public class PNUtil {
 
    public static <T extends Object> String toString(T[] array) {
       return toString(array, "");
-   }
-
-   public static String nowIso() {
-      return df.format(new Date());
-   }
-
-   public static void log(String tag, String message, PrintStream out) {
-      String timestamp = nowIso();
-      out.println(tag + ": " + timestamp + " " + message);
-   }
-
-   public static void log(String tag, Object from, String message, PrintStream out) {
-      log(tag, from.getClass().getName() + " " + message, out);
-   }
-
-   public static void log(String message) {
-      log("LOG", message, System.out);
-   }
-
-   public static void log(Object from, String message) {
-      log("LOG", from, message, System.out);
-   }
-
-   public static void error(Exception e, String message) {
-      log("ERROR", message, System.err);
-      e.printStackTrace();
-   }
-
-   public static void error(Exception e, Object from, String message) {
-      log("ERROR", from, message, System.err);
-      e.printStackTrace();
-   }
-
-   public static void fatalError(Exception e, String message) {
-      error(e, message);
-      System.exit(1);
-   }
-
-   public static void fatalError(Exception e, Object from, String message) {
-      error(e, from, message);
-      System.exit(1);
    }
 
 }
