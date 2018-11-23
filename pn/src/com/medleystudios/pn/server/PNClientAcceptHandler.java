@@ -37,32 +37,13 @@ public class PNClientAcceptHandler implements Runnable {
          try {
             PN.log(this, "Accepting next client...");
             socket = this.serverSocket.accept();
-         }
-         catch (SocketException e) {
-            PN.error(e, this, "Failed to accept client socket!");
-            this.failedAccept();
-            break;
+            socket.setTcpNoDelay(true);
+            socket.setReuseAddress(true);
          }
          catch (IOException e) {
             PN.error(e, this, "Failed to accept client socket!");
             this.failedAccept();
             break;
-         }
-
-         // Configure
-         try {
-            socket.setTcpNoDelay(true);
-            socket.setReuseAddress(true);
-         }
-         catch (SocketException e) {
-            try {
-               socket.close();
-            }
-            catch (IOException closeE) {
-               PN.error(closeE, this, "Close failed on newly connected socket which failed configuration");
-            }
-            PN.fatalError(e, this, "Failed to configure client socket!");
-            break; // Unnecessary (fatal error)
          }
 
          // Get PNConnection
