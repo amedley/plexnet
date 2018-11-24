@@ -2,6 +2,7 @@ package com.medleystudios.pn.server;
 
 import com.medleystudios.pn.PN;
 import com.medleystudios.pn.conn.PNConnection;
+import com.medleystudios.pn.io.PNDataOutputStream;
 import com.medleystudios.pn.io.PNInputStreamReader;
 import com.medleystudios.pn.io.PNOutputStreamWriter;
 import com.medleystudios.pn.util.PNUtil;
@@ -10,6 +11,7 @@ import java.io.IOException;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,51 +82,6 @@ public class PNServer implements Runnable {
 
                this.clientAcceptHandler = new PNClientAcceptHandler(this, (PNConnection connection) -> {
                   PN.log(this, "Got a connection! " + connection);
-
-                  try { Thread.sleep(2000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  PN.log(this, "Testing sending bytes: " + connection);
-
-                  connection.getWriter().write(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 20, 21, 22, 23, 24, 25, 26, 27, 28, 29 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 30, 31, 32, 33, 34, 35, 36, 37, 38, 39 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 40, 41, 42, 43, 44, 45, 46, 47, 48, 49 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 60, 61, 62, 63, 64, 65, 66, 67, 68, 69 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 70, 71, 72, 73, 74, 75, 76, 77, 78, 79 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 80, 81, 82, 83, 84, 85, 86, 87, 88, 89 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
-
-                  connection.getWriter().write(new byte[] { 90, 91, 92, 93, 94, 95, 96, 97, 98, 99 });
-                  try { Thread.sleep(1000); }
-                  catch (InterruptedException e) { e.printStackTrace(); }
 
                   try {
                      Thread.sleep(2000);
@@ -269,6 +226,7 @@ public class PNServer implements Runnable {
    }
 
    public static void main(String[] args) {
+      System.out.println("JVM Charset: " + Charset.defaultCharset().displayName());
       PNServer server;
       if (args.length > 0) {
          server = new PNServer(args);

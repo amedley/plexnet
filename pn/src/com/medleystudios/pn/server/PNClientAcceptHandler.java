@@ -48,9 +48,7 @@ public class PNClientAcceptHandler implements Runnable {
 
          // Get PNConnection
          PNConnection.get(socket)
-            .thenAccept((connection) -> {
-               this.accept(connection);
-            })
+            .thenAccept(this::accept)
             .exceptionally((t) -> {
                // This may only happen with one client, no need to call "failedAccept"
                PN.error(t, this, "Failed to create a PNConnection from newly accepted client socket!");
@@ -60,6 +58,7 @@ public class PNClientAcceptHandler implements Runnable {
                catch (IOException e) {
                   PN.error(e, this, "Close failed on newly connected socket which failed getting PNConnection");
                }
+               this.failedAccept();
                return null;
             });
       }

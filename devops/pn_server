@@ -15,4 +15,4 @@ fi
 # For now we will just run on localhost and pass in all arguments
 # In the future when this script must process exclusive arguments, change the index on "${@:i}" to prevent passing them
 # to the program
-java -javaagent:"$PN/ea-async-lib/ea-async-1.2.1.jar" -cp "$PN/pn/build/libs/server.jar" com.medleystudios.pn.server.PNServer "${@:1}"
+java -Dfile.encoding=UTF-8 -javaagent:"$PN/ea-async-lib/ea-async-1.2.1.jar" -cp "$PN/pn/build/libs/server.jar" com.medleystudios.pn.server.PNServer "${@:1}"

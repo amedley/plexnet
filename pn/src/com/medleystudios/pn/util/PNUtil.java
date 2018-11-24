@@ -82,4 +82,8 @@ public class PNUtil {
       return toString(array, "");
    }
 
+   public static int u(byte b) {
+      return ((b & 0x80) << 1) + b;
+   }
+
 }

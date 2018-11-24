@@ -57,17 +57,6 @@ public class PNInputStreamReader implements Runnable {
    }
 
    /**
-    * TODO
-    * We need some way to packet-ize the data.
-    * Probably not meant for either InputStreamReader or InputStreamWriter.
-    * Maybe this should go in PNConnection?
-    * Do we need a totally different class for packets?
-    */
-   public void process() {
-
-   }
-
-   /**
     * @return Returns true if it should continue to consume, false otherwise
     */
    private boolean consume() {

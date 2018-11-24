@@ -11,9 +11,13 @@ apply plugin: "java"
 
 sourceCompatibility = 1.8
 sourceSets.main.java.srcDirs = [ "src/" ]
+sourceSets.test.java.srcDirs = [ "test/" ]
 
 dependencies {
    compile "com.ea.async:ea-async:1.2.1"
+
+   testCompile "org.junit.jupiter:junit-jupiter-engine:5.0.0"
+   testCompile "org.junit.platform:junit-platform-launcher:1.0.0"
 }
 
 task buildserver(type: Jar) {
