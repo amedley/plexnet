@@ -1,4 +1,4 @@
-package com.medleystudios.pn.util;
+package com.medleystudios.pn.util.error;
 
 public class PNErrors {
 

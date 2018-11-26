@@ -2,23 +2,16 @@ package com.medleystudios.pn.server;
 
 import com.medleystudios.pn.PN;
 import com.medleystudios.pn.conn.PNConnection;
-import com.medleystudios.pn.io.PNDataOutputStream;
-import com.medleystudios.pn.io.PNInputStreamReader;
-import com.medleystudios.pn.io.PNOutputStreamWriter;
-import com.medleystudios.pn.util.PNUtil;
+import com.medleystudios.pn.conn.packets.PNPingPacket;
+import com.medleystudios.pn.util.error.PNErrorStorable;
+import com.medleystudios.pn.util.error.PNErrorStorage;
 
 import java.io.IOException;
 
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.Date;
 
-public class PNServer implements Runnable {
+public class PNServer implements Runnable, PNErrorStorable {
 
    private final Object closeLock = new Object();
 
@@ -32,7 +25,7 @@ public class PNServer implements Runnable {
    private final String host;
    private final int maxConnections;
 
-   private String errorMessage = null;
+   private PNErrorStorage errorStorage = new PNErrorStorage();
 
    public enum ServerState {
       INIT,                      // The server has yet started establishing
@@ -45,7 +38,7 @@ public class PNServer implements Runnable {
    private PNServer(PNServerRunArguments runArguments) {
       this.runArguments = runArguments;
 
-      PN.log(this, "" + runArguments);
+      PN.info(this, "" + runArguments);
 
       // Process run arguments
       this.port = this.runArguments.getPort();
@@ -64,7 +57,7 @@ public class PNServer implements Runnable {
    }
 
    private synchronized void start() {
-      PN.log(this, "Hosting server on port " + this.port);
+      PN.info(this, "Hosting server on port " + this.port);
 
       this.setState(ServerState.ESTABLISHING_HOST);
       PNConnection.host(this.host, this.port)
@@ -75,28 +68,50 @@ public class PNServer implements Runnable {
                   this.setState(ServerState.HOSTING);
                }
                else {
-                  // Failed to host
-                  this.errorMessage = serverSocketResolver.getErrorMessage();
+                  this.getErrorStorage().add(serverSocketResolver.getErrorStorage().getTopError());
                   this.setState(ServerState.FAILED_TO_HOST);
                }
 
                this.clientAcceptHandler = new PNClientAcceptHandler(this, (PNConnection connection) -> {
-                  PN.log(this, "Got a connection! " + connection);
+                  synchronized (this) {
+                     PN.info(this, "Got a connection! " + connection);
 
-                  try {
-                     Thread.sleep(2000);
+                     PN.sleep(2000);
+
+                     PN.info(this, "Sending packet");
+                     PNPingPacket ping = new PNPingPacket();
+                     for (int i = 0; i < 50; i++) {
+                        PN.sleep(10);
+                        ping.dates.add(new Date());
+                     }
+                     try {
+                        ping.write(connection.getWriter());
+                     }
+                     catch (IOException e) {
+                        PN.storeAndLogError(e, this, "Error writing packet to connection " + connection);
+                        connection.close();
+                        return;
+                     }
+
+
+                     for (int i = 0; i < 100; i++) {
+                        PN.sleep(10);
+                        // TODO
+                        // Remember to run 'connection.process' in the server loop when we start using that
+                        connection.process();
+                     }
+
+
+
+                     PN.sleep(2000);
+
+                     PN.info(this, "Testing orderly close: " + connection);
+                     connection.close();
+
+                     PN.info(this, "Tests finished!");
                   }
-                  catch (InterruptedException e) {
-                     e.printStackTrace();
-                  }
-
-                  PN.log(this, "Testing orderly close: " + connection);
-                  connection.close();
-
-                  PN.log(this, "Tests finished!");
-
                }, () -> {
-                  PN.log("Accept handler FAILED!");
+                  PN.info("Accept handler FAILED!");
                });
                new Thread(this.clientAcceptHandler).start();
             }
@@ -106,28 +121,23 @@ public class PNServer implements Runnable {
    private void loop() {
       long i = 0;
       while (true) {
-         try {
-            Thread.sleep(2);
-         }
-         catch (InterruptedException e) {
-            PN.fatalError(e, this, "Failed to sleep thread");
-         }
+         PN.sleep(2);
 
          synchronized (this) {
             if (this.isInitializing()) continue;
             if (this.isEstablishingHost()) continue;
             if (!this.isHosting()) {
-               PN.log(this, "Server no longer hosting! Exiting...");
+               PN.info(this, "Server no longer hosting! Exiting...");
                break;
             }
             if (!this.checkHost()) {
-               PN.log(this, "Server host checks failed! Exiting...");
+               PN.info(this, "Server host checks failed! Exiting...");
                break;
             }
 
             i++;
             if (i % 1000 == 0) {
-               PN.log("SERVER: " + this.serverSocket.toString());
+               PN.info("SERVER: " + this.serverSocket.toString());
             }
          }
       }
@@ -141,7 +151,7 @@ public class PNServer implements Runnable {
 
       if (this.serverSocket.isClosed() || !this.serverSocket.isBound()) {
          setState(ServerState.HOST_ENDED);
-         PN.log(this, "Server host ended!");
+         PN.info(this, "Server host ended!");
       }
 
       return true;
@@ -149,7 +159,7 @@ public class PNServer implements Runnable {
 
    public synchronized void close() {
       synchronized (closeLock) {
-         PN.log(this, "Closing server " + serverSocket);
+         PN.info(this, "Closing server " + serverSocket);
          try {
             this.serverSocket.close();
          }
@@ -158,6 +168,11 @@ public class PNServer implements Runnable {
          }
          this.serverSocket = null;
       }
+   }
+
+   @Override
+   public PNErrorStorage getErrorStorage() {
+      return this.errorStorage;
    }
 
    public synchronized boolean isInitializing() {
@@ -226,7 +241,6 @@ public class PNServer implements Runnable {
    }
 
    public static void main(String[] args) {
-      System.out.println("JVM Charset: " + Charset.defaultCharset().displayName());
       PNServer server;
       if (args.length > 0) {
          server = new PNServer(args);

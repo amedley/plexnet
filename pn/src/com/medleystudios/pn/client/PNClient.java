@@ -2,15 +2,16 @@ package com.medleystudios.pn.client;
 
 import com.medleystudios.pn.PN;
 import com.medleystudios.pn.conn.PNConnection;
-import com.medleystudios.pn.io.PNInputStreamReader;
-import com.medleystudios.pn.io.PNOutputStreamWriter;
-import com.medleystudios.pn.util.PNUtil;
+import com.medleystudios.pn.io.PNAsyncBufferedOutputStream;
+import com.medleystudios.pn.io.PNAsyncBufferedInputStream;
+import com.medleystudios.pn.util.error.PNErrorStorable;
+import com.medleystudios.pn.util.error.PNErrorStorage;
 
 import java.net.Socket;
 
 import static com.ea.async.Async.await;
 
-public class PNClient implements Runnable {
+public class PNClient implements Runnable, PNErrorStorable {
 
    public enum ClientState {
       INIT,                      // The connection has yet started establishing
@@ -29,12 +30,12 @@ public class PNClient implements Runnable {
    private final String host;
    private final int port;
 
-   private String errorMessage = null;
+   private PNErrorStorage errorStorage = new PNErrorStorage();
 
    private PNClient(PNClientRunArguments runArguments) {
       this.runArguments = runArguments;
 
-      PN.log(this, "" + runArguments);
+      PN.info(this, "" + runArguments);
 
       // Process run arguments
       this.host = this.runArguments.getHost();
@@ -52,7 +53,7 @@ public class PNClient implements Runnable {
    }
 
    private synchronized void start() {
-      PN.log(this, "Establishing client connection with endpoint " + this.host + ":" + this.port);
+      PN.info(this, "Establishing client connection with endpoint " + this.host + ":" + this.port);
       this.setState(ClientState.ESTABLISHING_CONNECTION);
       PNConnection.connect(this.host, this.port)
          .thenAccept((socketResolver) -> {
@@ -60,12 +61,12 @@ public class PNClient implements Runnable {
                if (socketResolver.didSucceed()) {
                   Socket clientSocket = socketResolver.getSocket();
                   this.connection = await(PNConnection.get(clientSocket));
-                  PN.log("Connection established: " + this.connection);
+                  PN.info("Connection established: " + this.connection);
                   this.setState(ClientState.CONNECTED);
                }
                else {
-                  this.errorMessage = socketResolver.getErrorMessage();
-                  PN.log("Failed to establish connection: " + this.errorMessage);
+                  this.getErrorStorage().add(socketResolver.getErrorStorage().getTopError());
+                  PN.info("Failed to establish connection: " + this.getErrorStorage().getTopError().getMessage());
                   this.setState(ClientState.FAILED_TO_CONNECT);
                }
             }
@@ -76,31 +77,25 @@ public class PNClient implements Runnable {
    private void loop() {
       long i = 0;
       while (true) {
-         try {
-            Thread.sleep(2);
-         }
-         catch (InterruptedException e) {
-            PN.fatalError(e, this, "Failed to sleep thread");
-         }
+         PN.sleep(2);
 
          synchronized (this) {
             if (isInitializing()) continue;
             if (isEstablishingConnection()) continue;
             if (!isConnected()) {
-               PN.log("Client no longer connected! Exiting...");
+               PN.info("Client no longer connected! Exiting...");
                break;
             }
             if (!checkConnection()) {
-               PN.log("Client connection checks failed! Exiting...");
+               PN.info("Client connection checks failed! Exiting...");
                break;
             }
 
-            PNInputStreamReader reader = this.connection.getReader();
-            PNOutputStreamWriter writer = this.connection.getWriter();
+            connection.process();
 
             i++;
             if (i % 1000 == 0) {
-               PN.log("CLIENT: " + this.connection);
+               PN.info("CLIENT: " + this.connection);
             }
          }
       }
@@ -113,13 +108,13 @@ public class PNClient implements Runnable {
       }
 
       if (this.connection.isClosed()) {
-         if (this.connection.getReader().didReachEnd()) {
+         if (this.connection.getInputStream().didReachEnd()) {
             setState(ClientState.DISCONNECTED_ORDERLY);
-            PN.log(this, "Client disconnected ORDERLY");
+            PN.info(this, "Client disconnected ORDERLY");
          }
          else {
             setState(ClientState.DISCONNECTED_ABORTIVE);
-            PN.log(this, "Client disconnected ABORTIVE");
+            PN.info(this, "Client disconnected ABORTIVE");
          }
 
          return false;
@@ -181,24 +176,19 @@ public class PNClient implements Runnable {
          if (prev != ClientState.CONNECTED) {
             throw new IllegalStateException();
          }
-         updateErrorMessage();
       }
       else if (next == ClientState.DISCONNECTED_ABORTIVE) {
          if (prev != ClientState.CONNECTED) {
             throw new IllegalStateException();
          }
-         updateErrorMessage();
       }
 
       this.state = next;
    }
 
-   public synchronized String getErrorMessage() {
-      return this.errorMessage;
-   }
-
-   private synchronized void updateErrorMessage() {
-      this.errorMessage = this.connection.getErrorMessage();
+   @Override
+   public PNErrorStorage getErrorStorage() {
+      return this.errorStorage;
    }
 
    public synchronized ClientState getState() {

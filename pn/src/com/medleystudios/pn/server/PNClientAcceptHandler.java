@@ -35,7 +35,7 @@ public class PNClientAcceptHandler implements Runnable {
 
          // Accept
          try {
-            PN.log(this, "Accepting next client...");
+            PN.info(this, "Accepting next client...");
             socket = this.serverSocket.accept();
             socket.setTcpNoDelay(true);
             socket.setReuseAddress(true);
@@ -67,7 +67,7 @@ public class PNClientAcceptHandler implements Runnable {
    }
 
    private synchronized void cleanUp() {
-      PN.log(this, "No longer accepting connections");
+      PN.info(this, "No longer accepting connections");
 
       this.server = null;
       this.serverSocket = null;
