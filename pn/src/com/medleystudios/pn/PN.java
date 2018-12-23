@@ -1,5 +1,6 @@
 package com.medleystudios.pn;
 
+import com.medleystudios.pn.util.PNLogger;
 import com.medleystudios.pn.util.error.PNError;
 import com.medleystudios.pn.util.error.PNErrorStorable;
 import com.medleystudios.pn.util.error.PNErrorStorage;
@@ -12,6 +13,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.util.TimeZone;
 
 public class PN {
@@ -29,9 +31,9 @@ public class PN {
       printOutput = printStream;
    }
 
-   private static long currentLogID = 0;
-   public static synchronized long nextLogID() {
-      return currentLogID++;
+   private static long currentLogId = 0;
+   public static synchronized long nextLogId() {
+      return currentLogId++;
    }
 
    public static String getThrowableLog(Throwable e) {
@@ -47,10 +49,12 @@ public class PN {
          pw.close();
       }
       catch (IOException e1) {
-         return "Unable to read Throwable information.";
+         return "Unable to parse Throwable information.";
       }
       return result;
    }
+
+   public static Random random = new Random();
 
    /**
     * Create's a {@link Date} from an ISO8601-formatted string. The date is converted from UTC to the Client TZ.
@@ -79,7 +83,7 @@ public class PN {
       return toISO(new Date());
    }
 
-   /**
+    /**
     * @return The ISO8601-formatted string representing the date object in UTC
     */
    public static String toISO(Date date) {
@@ -88,111 +92,116 @@ public class PN {
       return df.format(date);
    }
 
-   private static void baseLog(String tag, String message, long logID) {
+   private static void baseLog(String tag, String message, long logId) {
       if (message == null) message = "";
       String timestamp = PN.nowISO();
-      printOutput.println(tag + ": " + timestamp + " L" + logID + " " + message);
+      printOutput.println(tag + ": " + timestamp + " L" + logId + " " + message);
    }
 
-   private static void baseLog(String tag, Object caller, String message, long logID) {
+   private static void baseLog(String tag, Object caller, String message, long logId) {
       if (message == null) message = "";
-      baseLog(tag, (caller != null ? caller.getClass().getName() + " " : "") + message, logID);
+      baseLog(tag, (caller != null ? "((" + caller.getClass().getSimpleName() + ")) " : "") + message, logId);
    }
 
-   private static void baseLog(String tag, String callerClassName, String message, long logID) {
+   private static void baseLog(String tag, String callerClassName, String message, long logId) {
       if (message == null) message = "";
-      baseLog(tag, (callerClassName != null ? callerClassName + " " : "") + message, logID);
+      baseLog(tag, (callerClassName != null ? callerClassName + " " : "") + message, logId);
    }
 
    private static void baseLog(String tag, String message) {
       if (message == null) message = "";
-      baseLog(tag, message, nextLogID());
+      baseLog(tag, message, nextLogId());
    }
 
    private static void baseLog(String tag, Object caller, String message) {
       if (message == null) message = "";
-      baseLog(tag, caller, message, nextLogID());
+      baseLog(tag, caller, message, nextLogId());
    }
 
    private static void baseLog(String tag, String callerClassName, String message) {
       if (message == null) message = "";
-      baseLog(tag, (callerClassName != null ? callerClassName + " " : "") + message, nextLogID());
+      baseLog(tag, (callerClassName != null ? callerClassName + " " : "") + message, nextLogId());
    }
 
 
 
-   public static void info(String message, long logID) {
+   public static void info(String message, long logId) {
       if (message == null) message = "";
-      baseLog("INFO", message, logID);
+      baseLog("INFO", message, logId);
    }
 
-   public static void info(Object caller, String message, long logID) {
+   public static void info(Object caller, String message, long logId) {
       if (message == null) message = "";
-      baseLog("INFO", (caller != null ? caller.getClass().getName() + " " : "") + message, logID);
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
+      baseLog("INFO", (caller != null ? "((" + caller.getClass().getSimpleName() + ")) " : "") + message, logId);
    }
 
-   public static void info(String callerClassName, String message, long logID) {
+   public static void info(String callerClassName, String message, long logId) {
       if (message == null) message = "";
-      baseLog("INFO", (callerClassName != null ? callerClassName + " " : "") + message, logID);
+      baseLog("INFO", (callerClassName != null ? callerClassName + " " : "") + message, logId);
    }
 
    public static void info(String message) {
       if (message == null) message = "";
-      baseLog("INFO", message, nextLogID());
+      baseLog("INFO", message, nextLogId());
    }
 
    public static void info(Object caller, String message) {
       if (message == null) message = "";
-      baseLog("INFO", caller, message, nextLogID());
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
+      baseLog("INFO", caller, message, nextLogId());
    }
 
    public static void info(String callerClassName, String message) {
       if (message == null) message = "";
-      baseLog("INFO", (callerClassName != null ? callerClassName + " " : "") + message, nextLogID());
+      baseLog("INFO", (callerClassName != null ? callerClassName + " " : "") + message, nextLogId());
    }
 
 
 
-   public static void softError(String message, long logID) {
+   public static void softError(String message, long logId) {
       if (message == null) message = "";
       // Until we redirect to a file, just write to System.out
-      baseLog("SOFT ERROR", message, logID);
+      baseLog("SOFT ERROR", message, logId);
    }
 
-   public static void softError(Object caller, String message, long logID) {
+   public static void softError(Object caller, String message, long logId) {
       if (message == null) message = "";
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       // Until we redirect to a file, just write to System.out
-      baseLog("SOFT ERROR", caller, message, logID);
+      baseLog("SOFT ERROR", caller, message, logId);
    }
 
-   public static void softError(String callerClassName, String message, long logID) {
+   public static void softError(String callerClassName, String message, long logId) {
       if (message == null) message = "";
       // Until we redirect to a file, just write to System.out
-      baseLog("SOFT ERROR", (callerClassName != null ? callerClassName + " " : "") + message, logID);
+      baseLog("SOFT ERROR", (callerClassName != null ? callerClassName + " " : "") + message, logId);
    }
 
    public static void softError(String message) {
       if (message == null) message = "";
       // Until we redirect to a file, just write to System.out
-      baseLog("SOFT ERROR", message, nextLogID());
+      baseLog("SOFT ERROR", message, nextLogId());
    }
 
    public static void softError(Object caller, String message) {
       if (message == null) message = "";
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       // Until we redirect to a file, just write to System.out
-      baseLog("SOFT ERROR", caller, message, nextLogID());
+      baseLog("SOFT ERROR", caller, message, nextLogId());
    }
 
    public static void softError(String callerClassName, String message) {
       if (message == null) message = "";
       // Until we redirect to a file, just write to System.out
-      baseLog("SOFT ERROR", (callerClassName != null ? callerClassName + " " : "") + message, nextLogID());
+      baseLog("SOFT ERROR", (callerClassName != null ? callerClassName + " " : "") + message, nextLogId());
    }
 
 
 
-   public static void errorStorage(PNErrorStorage errorStorage, Object caller, String message, long logID) {
+   public static void errorStorage(PNErrorStorage errorStorage, Object caller, String message, long logId) {
       if (message == null) message = "";
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       List<PNError> errors = errorStorage.nest();
       for (int i = 0; i < errors.size(); i++) {
          PNError error = errorStorage.get(i);
@@ -202,61 +211,62 @@ public class PN {
             + PN.getThrowableLog(error.getThrowable());
       }
 
-      baseLog("ERROR STORAGE", caller, message, logID);
+      baseLog("ERROR STORAGE", caller, message, logId);
    }
 
-   public static void errorStorage(PNErrorStorage errorStorage, String callerClassName, String message, long logID) {
-      baseLog("ERROR STORAGE", (callerClassName != null ? callerClassName + " " : "") + message, logID);
+   public static void errorStorage(PNErrorStorage errorStorage, String callerClassName, String message, long logId) {
+      baseLog("ERROR STORAGE", (callerClassName != null ? callerClassName + " " : "") + message, logId);
    }
 
-   public static void errorStorage(PNErrorStorage errorStorage, String message, long logID) {
-      errorStorage(errorStorage, null, message, logID);
+   public static void errorStorage(PNErrorStorage errorStorage, String message, long logId) {
+      errorStorage(errorStorage, null, message, logId);
    }
 
    public static void errorStorage(PNErrorStorage errorStorage, Object caller, String message) {
-      errorStorage(errorStorage, caller, message, nextLogID());
+      errorStorage(errorStorage, caller, message, nextLogId());
    }
 
    public static void errorStorage(PNErrorStorage errorStorage, String message) {
-      errorStorage(errorStorage, null, message, nextLogID());
+      errorStorage(errorStorage, null, message, nextLogId());
    }
 
    public static void errorStorage(PNErrorStorage errorStorage, String callerClassName, String message) {
-      errorStorage(errorStorage, (callerClassName != null ? callerClassName + " " : "") + message, nextLogID());
+      errorStorage(errorStorage, (callerClassName != null ? callerClassName + " " : "") + message, nextLogId());
    }
 
 
 
-   public static void error(Throwable t, String message, long logID) {
+   public static void error(Throwable t, String message, long logId) {
       if (message == null) message = "";
       // Until we redirect to a file, just write to System.out
       // The reason we are not redirecting to System.err is because the first println goes on the same line as
       // System.out's current line in the console
-      baseLog("ERROR", message + "\n" + PN.getThrowableLog(t), logID);
+      baseLog("ERROR", message + "\n" + PN.getThrowableLog(t), logId);
    }
 
-   public static void error(Throwable t, Object caller, String message, long logID) {
+   public static void error(Throwable t, Object caller, String message, long logId) {
+      if (message == null) message = "";
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
+      // Until we redirect to a file, just write to System.out
+      // The reason we are not redirecting to System.err is because the first println goes on the same line as
+      // System.out's current line in the console
+      baseLog("ERROR", caller, message + "\n" + PN.getThrowableLog(t), logId);
+   }
+
+   public static void error(Throwable t, String callerClassName, String message, long logId) {
       if (message == null) message = "";
       // Until we redirect to a file, just write to System.out
       // The reason we are not redirecting to System.err is because the first println goes on the same line as
       // System.out's current line in the console
-      baseLog("ERROR", caller, message + "\n" + PN.getThrowableLog(t), logID);
+      baseLog("ERROR", (callerClassName != null ? callerClassName + " " : "") + message + "\n" + PN.getThrowableLog(t), logId);
    }
 
-   public static void error(Throwable t, String callerClassName, String message, long logID) {
-      if (message == null) message = "";
-      // Until we redirect to a file, just write to System.out
-      // The reason we are not redirecting to System.err is because the first println goes on the same line as
-      // System.out's current line in the console
-      baseLog("ERROR", (callerClassName != null ? callerClassName + " " : "") + message + "\n" + PN.getThrowableLog(t), logID);
-   }
-
-   public static void error(PNError error, long logID) {
+   public static void error(PNError error, long logId) {
       if (error == null) {
-         error(null, null, null, logID);
+         error(null, null, null, logId);
       }
       else {
-         error(error.getThrowable(), error.getCallerClassName(), error.getMessage(), logID);
+         error(error.getThrowable(), error.getCallerClassName(), error.getMessage(), logId);
       }
    }
 
@@ -265,7 +275,7 @@ public class PN {
       // Until we redirect to a file, just write to System.out
       // The reason we are not redirecting to System.err is because the first println goes on the same line as
       // System.out's current line in the console
-      error(t, message, nextLogID());
+      error(t, message, nextLogId());
    }
 
    public static void error(Throwable t, Object caller, String message) {
@@ -273,7 +283,7 @@ public class PN {
       // Until we redirect to a file, just write to System.out
       // The reason we are not redirecting to System.err is because the first println goes on the same line as
       // System.out's current line in the console
-      error(t, caller, message, nextLogID());
+      error(t, caller, message, nextLogId());
    }
 
    public static void error(Throwable t, String callerClassName, String message) {
@@ -281,20 +291,22 @@ public class PN {
       // Until we redirect to a file, just write to System.out
       // The reason we are not redirecting to System.err is because the first println goes on the same line as
       // System.out's current line in the console
-      error(t, (callerClassName != null ? callerClassName + " " : "") + message, nextLogID());
+      error(t, (callerClassName != null ? callerClassName + " " : "") + message, nextLogId());
    }
 
    public static void error(PNError error) {
-      error(error, nextLogID());
+      error(error, nextLogId());
    }
 
    public static PNError storeError(Throwable t, PNErrorStorable caller, String message) {
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       PNError error = new PNError(t, caller, message);
       caller.getErrorStorage().add(error);
       return error;
    }
 
    public static PNError storeError(Throwable t, Object caller, PNErrorStorable storable, String message) {
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       PNError error = new PNError(t, caller, message);
       storable.getErrorStorage().add(error);
       return error;
@@ -307,6 +319,7 @@ public class PN {
    }
 
    public static PNError storeAndLogError(Throwable t, PNErrorStorable caller, String message) {
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       PNError error = new PNError(t, caller, message);
       caller.getErrorStorage().add(error);
       PN.error(error);
@@ -322,6 +335,7 @@ public class PN {
 
    public static void fatalError(Throwable t, Object caller, String message) {
       if (message == null) message = "";
+      if (caller instanceof PNLogger) message = ((PNLogger)caller).log(message);
       error(t, caller, message);
       System.exit(1);
    }

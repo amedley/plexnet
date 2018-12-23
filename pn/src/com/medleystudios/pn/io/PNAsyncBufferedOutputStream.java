@@ -35,8 +35,6 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
 
    private boolean ran = false;
 
-   private boolean flushEnabled = true;
-
    private final long asyncDelayMillis;
 
    public static PNAsyncBufferedOutputStream start(OutputStream out) {
@@ -58,7 +56,6 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
       new Thread(abos).start();
       return abos;
    }
-
 
    protected PNAsyncBufferedOutputStream(OutputStream out, Runnable onClosed, long asyncDelayMillis) {
       super(out);
@@ -96,10 +93,8 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
          while (true) {
             PN.sleep(2);
 
-            synchronized (bufferLock) {
-               if (isClosed()) break;
-               flush();
-            }
+            if (isClosed()) break;
+            flush();
          }
       }
       catch (IOException e) {
@@ -114,18 +109,6 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
       }
       buffer[size++] = (byte)b;
       writeTotal++;
-   }
-
-   protected void disableFlush() {
-      synchronized (bufferLock) {
-         flushEnabled = false;
-      }
-   }
-
-   protected void enableFlush() {
-      synchronized (bufferLock) {
-         flushEnabled = true;
-      }
    }
 
    @Override
@@ -162,24 +145,15 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
       }
    }
 
-   /**
-    * This should only be used for testing and/or if you are prepared to handle a potential mid-flush close on the
-    * underlying output stream.
-    * <p>
-    * Flushes the output stream and does not rethrow the error.
-    */
-   public void flushUnsafe() {
-      try { flush(); }
-      catch (IOException e) { PN.error(e, this, "Failed unsafe flush"); } ;
-   }
-
    @Override
    public void flush() throws IOException {
       synchronized (bufferLock) {
-         if (!flushEnabled || size == 0) return;
-         this.out.write(this.buffer, 0, size);
+         if (size == 0) return;
+         synchronized (closeLock) {
+            this.out.write(this.buffer, 0, size);
+            super.flush();
+         }
          outputTotal += size;
-         super.flush();
          size = 0;
       }
    }
@@ -217,36 +191,35 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
     *                    useful in case you know the {@link OutputStream} will be closed by a subsequent.
     */
    public void close(boolean closeStream) {
+      // Do not synchronize on the buffer lock in here.
+
+      synchronized (closeLock) {
+         if (this.isClosed()) return;
+         this.closed = true;
+      }
+
       synchronized (this) {
-         // contrary to the PNAsyncBufferedInputStream, we sync to the bufferLock when closing. This is because we
-         // know the write method isn't blocking.
-         synchronized (bufferLock) {
-            synchronized (closeLock) {
-               if (isClosed()) return;
-               this.closed = true;
-
-               if (closeStream == true) {
-                  try {
-                     super.close(); // calls flush
-                  }
-                  catch (IOException e) {
-                     PN.error(e, this, "Failed to close output stream.");
-                  }
-               }
-               else {
-                  try {
-                     this.flush();
-                  }
-                  catch (IOException e) {
-                     PN.softError(this, "Failed to flush resources mid-close!");
-                  }
-               }
-
-               if (this.onClosed != null) {
-                  this.onClosed.run();
-                  this.onClosed = null;
-               }
+         if (closeStream == true) {
+            try {
+               // calls flush and closes underlying output stream
+               super.close();
             }
+            catch (IOException e) {
+               PN.error(e, this, "Failed to close output stream.");
+            }
+         }
+         else {
+            try {
+               this.flush();
+            }
+            catch (IOException e) {
+               PN.softError(this, "Failed to flush resources mid-close!");
+            }
+         }
+
+         if (this.onClosed != null) {
+            this.onClosed.run();
+            this.onClosed = null;
          }
       }
    }
@@ -267,4 +240,5 @@ public class PNAsyncBufferedOutputStream extends FilterOutputStream implements R
    public PNErrorStorage getErrorStorage() {
       return this.errorStorage;
    }
+
 }

@@ -8,11 +8,10 @@ import java.io.UnsupportedEncodingException;
 
 import static com.medleystudios.pn.util.PNUtil.u;
 
-public class PNInputStreamReader<T extends InputStream> {
+public class PNInputStreamReader {
+   private InputStream in;
 
-   T in;
-
-   public PNInputStreamReader(T in) {
+   public PNInputStreamReader(InputStream in) {
       this.in = in;
    }
 
@@ -79,9 +78,4 @@ public class PNInputStreamReader<T extends InputStream> {
    public int available() throws IOException {
       return in.available();
    }
-
-   public T getInputStream() {
-      return this.in;
-   }
-
 }

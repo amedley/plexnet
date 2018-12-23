@@ -1,12 +1,12 @@
-package com.medleystudios.pn.test.integration.io;
+package com.medleystudios.pn.integration.io;
 
 import com.medleystudios.pn.PN;
 import com.medleystudios.pn.io.PNAsyncBufferedInputStream;
 import com.medleystudios.pn.io.PNAsyncBufferedOutputStream;
 import com.medleystudios.pn.io.PNInputStreamReader;
 import com.medleystudios.pn.io.PNOutputStreamWriter;
-import com.medleystudios.pn.test.PNTestHelper;
-import com.medleystudios.pn.test.integration.PNIntegrationTestHelper;
+import com.medleystudios.pn.PNTestHelper;
+import com.medleystudios.pn.integration.PNIntegrationTestHelper;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileInputStream;
@@ -26,7 +26,8 @@ public class PNAsyncIOTest {
       try {
          FileOutputStream fos = new FileOutputStream(READ_WRITE_FILE_PATH);
          PNAsyncBufferedOutputStream out = PNAsyncBufferedOutputStream.start(fos, PNTestHelper.ASYNC_RUN_DELAY);
-         PNOutputStreamWriter<PNAsyncBufferedOutputStream> writer = new PNOutputStreamWriter<>(out);
+         PNOutputStreamWriter writer = new PNOutputStreamWriter(out);
+
          writer.writeByte(-200);
          writer.writeByte(-100);
          writer.writeByte(-50);
@@ -82,14 +83,13 @@ public class PNAsyncIOTest {
 
          FileInputStream fis = new FileInputStream(READ_WRITE_FILE_PATH);
          PNAsyncBufferedInputStream in = PNAsyncBufferedInputStream.start(fis, PNTestHelper.ASYNC_RUN_DELAY);
-         PNInputStreamReader<PNAsyncBufferedInputStream> reader = new PNInputStreamReader<>(in);
+         PNInputStreamReader reader = new PNInputStreamReader(in);
 
 
          assertTrue(230 > in.getInputTotal());
          PN.sleep(PNTestHelper.ASYNC_WAIT_TIME);
          assertTrue(in.getInputTotal() > in.getReadTotal());
          assertEquals(230, in.getInputTotal());
-
 
          assertEquals(56, reader.readByte());   // (byte)-200 = 56
          assertEquals(-100, reader.readByte());

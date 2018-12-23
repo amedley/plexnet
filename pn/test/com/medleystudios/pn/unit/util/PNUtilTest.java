@@ -1,4 +1,4 @@
-package com.medleystudios.pn.test.unit.util;
+package com.medleystudios.pn.unit.util;
 
 import org.junit.jupiter.api.Test;
 import static com.medleystudios.pn.util.PNUtil.u;

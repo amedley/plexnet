@@ -1,6 +1,6 @@
-package com.medleystudios.pn.test.unit;
+package com.medleystudios.pn.unit;
 
-import com.medleystudios.pn.test.PNTestHelper;
+import com.medleystudios.pn.PNTestHelper;
 
 public class PNUnitTestHelper {
 

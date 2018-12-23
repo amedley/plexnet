@@ -40,19 +40,38 @@ public class PNNestedArrayList<T extends Object> extends ArrayList<T> {
    public List<T> nest() {
       List<T> nest = new ArrayList<>();
       for (int i = 0; i < this.size(); i++) {
-         T value = this.get(i);
-         nest.add(value);
+         nest.add(this.get(i));
+      }
 
-         for (int j = 0; j < this.children.size(); j++) {
-            PNNestedArrayList<T> child = this.children.get(j);
-            List<T> childNest = child.nest();
+      List<PNNestedArrayList<T>> childNest = getChildNest();
+      for (int i = 0; i < childNest.size(); i++) {
+         List<T> child = childNest.get(i);
 
-            for (int k = 0; k < childNest.size(); k++) {
-               nest.add(childNest.get(k));
-            }
+         for (int j = 0; j < child.size(); j++) {
+            nest.add(child.get(j));
          }
       }
       return nest;
+   }
+
+   public List<PNNestedArrayList<T>> getChildNest() {
+      List<PNNestedArrayList<T>> nest = new ArrayList<>();
+
+      for (int i = 0; i < children.size(); i++) {
+         PNNestedArrayList<T> child = children.get(i);
+         nest.add(child);
+         List<PNNestedArrayList<T>> childChildNest = child.getChildNest();
+
+         for (int j = 0; j < childChildNest.size(); j++) {
+            nest.add(childChildNest.get(j));
+         }
+      }
+
+      return nest;
+   }
+
+   public List<PNNestedArrayList<T>> getChildren() {
+      return children;
    }
 
    public void removeAll() {
@@ -64,7 +83,7 @@ public class PNNestedArrayList<T extends Object> extends ArrayList<T> {
    public void cleanNest() {
       removeAll();
       while (children.size() > 0) {
-         children.remove(children.size() - 1).cleanNest(); ;
+         children.remove(children.size() - 1).cleanNest();
       }
    }
 

@@ -86,7 +86,7 @@ public class PNAsyncBufferedInputStream extends FilterInputStream implements Run
          while (true) {
             if (isClosed()) break;
 
-            int read = this.in.read();
+            int read = this.in.read(); // blocks
 
             if (read != -1) {
                synchronized (bufferLock) {
@@ -110,11 +110,11 @@ public class PNAsyncBufferedInputStream extends FilterInputStream implements Run
       }
       catch (IOException e) {
          if (isClosed()) {
-            PN.info(this, "Input stream '.read' was interrupted by an IOException. The stream was manually closed " +
-               "after the read started blocking. Exception message: " + e.getMessage());
+            PN.info(this, "Input stream '.parse' was interrupted by an IOException. The stream was manually closed " +
+               "after the parse started blocking. IOException: " + e.getMessage());
          }
          else {
-            PN.storeAndLogError(e, this, "Input stream '.read' interrupted by an unexpected IOException! Closing input stream.");
+            PN.storeAndLogError(e, this, "Input stream '.parse' interrupted by an unexpected IOException! Closing input stream.");
             this.close();
          }
       }
@@ -188,7 +188,7 @@ public class PNAsyncBufferedInputStream extends FilterInputStream implements Run
    }
 
    /**
-    * Peeks ahead by 'offset' bytes and returns the value read at that offset. The value is in the range [-1, 255]
+    * Peeks ahead by 'offset' bytes and returns the value parse at that offset. The value is in the range [-1, 255]
     * @param offset The number of bytes to peak ahead
     * @return Returns -1 if no value was found, or the unsigned representation of the byte [0, 255] at the offset
     */
@@ -262,11 +262,13 @@ public class PNAsyncBufferedInputStream extends FilterInputStream implements Run
     *                    useful in case you know the {@link InputStream} will be closed by a different call after this
     *                    call.
     */
-   public synchronized void close(boolean closeStream) {
+   public void close(boolean closeStream) {
       synchronized (closeLock) {
-         if (isClosed()) return;
+         if (this.isClosed()) return;
          this.closed = true;
+      }
 
+      synchronized (this) {
          if (closeStream == true) {
             try {
                super.close();
@@ -298,9 +300,9 @@ public class PNAsyncBufferedInputStream extends FilterInputStream implements Run
     * <p>
     * It is standard to ignore the potential usefulness of {@link InputStream#available()} because in other streams
     * it is merely an estimate. However, in {@link PNAsyncBufferedInputStream}, if synchronized to the buffer lock,
-    * {@link #available()} is accuracy-perfect and should be used alongside the read methods.
+    * {@link #available()} is accuracy-perfect and should be used alongside the parse methods.
     *
-    * @return Returns the number of bytes that can be read.
+    * @return Returns the number of bytes that can be parse.
     */
    @Override
    public int available() {
@@ -319,4 +321,5 @@ public class PNAsyncBufferedInputStream extends FilterInputStream implements Run
    public PNErrorStorage getErrorStorage() {
       return this.errorStorage;
    }
+
 }

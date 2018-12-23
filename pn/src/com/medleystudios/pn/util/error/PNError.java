@@ -29,7 +29,7 @@ public class PNError {
    }
 
    public PNError(Throwable throwable, Object caller, String message) {
-      this(throwable, caller != null ? caller.getClass().getName() : null, message);
+      this(throwable, caller != null ? "((" + caller.getClass().getSimpleName() + "))" : null, message);
    }
 
    public Throwable getThrowable() {
@@ -46,7 +46,9 @@ public class PNError {
 
    @Override
    public String toString() {
-      return "PNError[" + (callerClassName != null ? callerClassName + " " : "") + message + "]";
+      return "PNError[" + (callerClassName != null ? callerClassName + " " : "")
+         + (throwable != null ? throwable.getClass().getSimpleName() + ": " + throwable.getMessage() + ", " : "")
+         + "\"" + message + "\"]";
    }
 
 }

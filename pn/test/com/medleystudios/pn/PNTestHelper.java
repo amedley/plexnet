@@ -1,4 +1,4 @@
-package com.medleystudios.pn.test;
+package com.medleystudios.pn;
 
 public class PNTestHelper {
 

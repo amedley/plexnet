@@ -6,7 +6,8 @@
 ✔ Custom command line arguments to PNServer and PNClient @done(Saturday, 2018/11/17 08:48 am)
 ✔ Test connecting PNClient to PNServer @done(Saturday, 2018/11/17 08:48 am)
 ✔ Write utility methods for logging @done(Saturday, 2018/11/17 08:49 am)
-☐ Write admin commands API so we can write to stdin
+✘ Write admin commands API so we can write to stdin @cancelled(Tuesday, 2018/11/27 05:13 pm)
+   This isn't necessary right now, and it doesn't have to ever be necessary. Game servers are supposed to have extremely short lifespans. They're supposed to literally last for one game session.
 ✔ Distinguish connection release in terms of "abortive" and "orderly". Implement both forms of connection release. @done(Thursday, 2018/11/22 01:01 pm)
    https://docs.oracle.com/javase/8/docs/technotes/guides/net/articles/connection_release.html
 
@@ -172,7 +173,42 @@
          As I began implementing Orderly connection release and Abortive connection release via the "TCP half-close" method, I realized that this is the wrong technical direction for PlexNet. Given that the servers are entirely authoritative, we don't need to use the half-close method. I chose instead to go with the method where we consume all input data before closing the socket. See the "consume" implementation in PNInputStreamReader.
          ✔ Implementation @done(Thursday, 2018/11/22 01:04 pm)
 
-☐ Send and receive large sets of data using chunking
-   "large" means larger than the Ethernet MTU standard would support for a single TCP payload, which is 1500 bytes, so > 1500 b
+✔ Packets @done(Tuesday, 2018/11/27 05:08 pm)
 
-☐ Packets
+Accept Policy [2018/11/27 at 17:43 ET]:
+   An Accept Policy would be useful to have in the case where we have some underlying requirements the client must undergo before being fully accepted by the Server.
+   Technically any connection can be accepted at the TCP level, but we can abstract on top of that and say something like "NO more connections after we have accepted 3 clients", or "All clients must send this secret key".
+
+   ☐ Create a base, step-appendable `PNPolicy` in `pn.policy`.
+   ☐ Create a base `PNAcceptPolicy` in 
+      ☐ Set up base-necessities like succeeding SessionID authentication
+      ☐ Make the Accept Policy appendable so lib clients can easily create their own Accept Policies.
+         ☐ Require that the base-policy be used in some manner, SessionIDs are necessary at PN's low-level.
+         
+   ☐ Create an Accept Policy that requires the client / server secret keys to match
+      Failure to enforce this policy should constitute an IP ban for malicious activity. Since we don't support IP bans
+      yet, we can just immediately reject the client for "unauthorized access"
+   ☐ Create an Accept Policy that requires the client / server version keys to match
+      Failure to enforce this policy should result in the client being told they need to update their game.
+
+Client Session [2018/11/27 at 17:10 ET]:
+   'Client Session' is an idea I've been thinking about for a few days now. I think we need high-level, overridable, relational object that relates a client to their TCP connection. The idea I have right now is that this is where lib clients would be able to "easily" interact with their PlexNet configuration. It's possible that we will create a low-level composite version of this object that would be an anonymous "Session" object. That means ClientSession and ServerSession could extend Session. For now they will be totally separate implementations.
+
+   Requirements & Design:
+      Composition relationship with PNClient
+      PNClient owns PNClientSession (PNClientSession is responsible for nulling its reference to PNClient on cleanup)
+      Thread safety managed by PNClient without any synchronized tags in the PNClientSession code (so lib users don't have to deal with that)
+      Authenticates a client per-session
+      Handler for receiving packets
+      API for sending packets (should also make it possible for the client to NOT have to handle the flushLock in PNAsyncBufferedOutputStream)
+      PNServer generates a SessionID for the PNClientSession as part of the base "Accept Policy" on PNClient
+      PNServer will immediately reject a client that fails the Accept Policy
+
+   ☐ Create an Abstract class `PNClientSession` which requires a unique Session ID
+      ☐ Create static inner class `SessionId` and override hash/equals/toString
+      ☐ 
+
+Server Session TIMESTAMP:
+
+UDP TIMESTAMP:
+   ☐ TODO

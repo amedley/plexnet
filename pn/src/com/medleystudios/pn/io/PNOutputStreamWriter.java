@@ -4,21 +4,19 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-public class PNOutputStreamWriter<T extends OutputStream> {
+public class PNOutputStreamWriter {
+   private OutputStream out;
 
-   T out;
-
-   public PNOutputStreamWriter(T out) {
-      if (out == null) throw new IllegalArgumentException("out cannot be null");
+   public PNOutputStreamWriter(OutputStream out) {
       this.out = out;
    }
 
    public void writeBoolean(boolean v) throws IOException {
-      out.write((byte)(v ? 1 : 0));
+      this.out.write((byte)(v ? 1 : 0));
    }
 
    public void writeByte(int v) throws IOException {
-      out.write((byte)(v & 0xff));
+      this.out.write((byte)(v & 0xff));
    }
 
    public void writeShort(int v) throws IOException {
@@ -64,9 +62,4 @@ public class PNOutputStreamWriter<T extends OutputStream> {
          this.out.write(bytes[i]);
       }
    }
-
-   public T getOutputStream() {
-      return this.out;
-   }
-
 }

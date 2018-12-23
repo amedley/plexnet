@@ -2,16 +2,16 @@ package com.medleystudios.pn.conn.packets;
 
 public class PNPackets {
 
-   private static short currentPacketID = 0;
-
    public static final int ID_BYTES = 2;
    public static final int LENGTH_BYTES = 4;
 
-   public static synchronized short nextPacketID() {
-      return currentPacketID++;
+   private static short currentPacketId = 0;
+   private static synchronized short nextPacketId() {
+      return currentPacketId++;
    }
 
-   public static short PING_PACKET = nextPacketID();
-   public static short PONG_PACKET = nextPacketID();
+   public static short PING_PACKET = nextPacketId();
+   public static short PONG_PACKET = nextPacketId();
+   public static short MESSAGE_PACKET = nextPacketId();
 
 }

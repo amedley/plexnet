@@ -1,15 +1,14 @@
 package com.medleystudios.pn.conn;
 
 import com.medleystudios.pn.PN;
+import com.medleystudios.pn.conn.packets.PNPacket;
 import com.medleystudios.pn.conn.packets.PNPackets;
-import com.medleystudios.pn.conn.packets.PNPingPacket;
-import com.medleystudios.pn.conn.packets.PNPongPacket;
-import com.medleystudios.pn.io.PNAsyncBufferedOutputStream;
+import com.medleystudios.pn.conn.packets.PNPacketReceiver;
 import com.medleystudios.pn.io.PNAsyncBufferedInputStream;
 import com.medleystudios.pn.io.PNInputStreamReader;
 import com.medleystudios.pn.io.PNOutputStreamWriter;
+import com.medleystudios.pn.io.PNPacketInputStream;
 import com.medleystudios.pn.io.PNPacketOutputStream;
-import com.medleystudios.pn.util.PNUtil;
 import com.medleystudios.pn.util.error.PNError;
 import com.medleystudios.pn.util.error.PNErrorStorable;
 import com.medleystudios.pn.util.error.PNErrorStorage;
@@ -20,27 +19,27 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-import static com.medleystudios.pn.util.PNUtil.u;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
 public class PNConnection implements PNErrorStorable {
 
    private final Object closeLock = new Object();
 
-   private ConnectionID id;
+   private final ConnectionId id;
+   private boolean disconnectedSelf = false;
    private boolean closed = false;
    private Socket socket;
-   private PNAsyncBufferedInputStream in;
+   private PNPacketInputStream in;
    private PNPacketOutputStream out;
-
-   private PNInputStreamReader<PNAsyncBufferedInputStream> reader;
-   private PNOutputStreamWriter<PNPacketOutputStream> writer;
+   private PNInputStreamReader reader;
+   private PNOutputStreamWriter writer;
 
    private PNErrorStorage errorStorage = new PNErrorStorage();
+
+   private PNPacketReceiver packetReceiver = null;
 
    public static CompletableFuture<ServerSocketResolver> host(String host, int port) {
       return supplyAsync(() -> {
@@ -80,7 +79,7 @@ public class PNConnection implements PNErrorStorable {
    }
 
    private PNConnection(Socket socket) {
-      this.id = ConnectionID.next();
+      this.id = ConnectionId.next();
       this.socket = socket;
 
       if (this.socket.isClosed()) {
@@ -112,91 +111,87 @@ public class PNConnection implements PNErrorStorable {
          PN.fatalError(e, this, "Failed to get socket output stream " + this.socket);
       }
 
-      this.in = PNAsyncBufferedInputStream.start(in, this::onInputStreamClosed);
+      this.in = PNPacketInputStream.start(in, this::onInputStreamClosed);
       this.out = PNPacketOutputStream.start(out, this::onOutputStreamClosed);
-      this.errorStorage
+      this.getErrorStorage()
          .addChild(this.in.getErrorStorage())
          .addChild(this.out.getErrorStorage());
+      this.reader = new PNInputStreamReader(this.in);
+      this.writer = new PNOutputStreamWriter(this.out);
+   }
 
-      this.reader = new PNInputStreamReader<>(this.in);
-      this.writer = new PNOutputStreamWriter<>(this.out);
+   public synchronized void setPacketReceiver(PNPacketReceiver packetReceiver) {
+      this.packetReceiver = packetReceiver;
    }
 
    public synchronized void process() {
+      try {
+         processImpl();
+      }
+      catch (IndexOutOfBoundsException e) {
+         PN.storeAndLogError(e, this, "Failed to process data due to malformed data! Closing connection.");
+         close();
+      }
+      catch (IOException e) {
+         PN.storeAndLogError(e, this, "Failed to process data due to IOException! Closing connection.");
+         close();
+      }
+   }
+
+   protected void processImpl() throws IOException, IndexOutOfBoundsException {
       synchronized (in.getBufferLock()) {
-         int available = in.available();
-         // read from reader
-         if (available >= PNPackets.LENGTH_BYTES) {
-            int length = (in.peekU(0) << 24) | (in.peekU(1) << 16) | (in.peekU(2) << 8) | in.peekU(3);
+         if (this.packetReceiver == null) return;
+         while (readPacket(getReader()));
+      }
+   }
 
-            // make sure we have read the whole payload
-            if (available - PNPackets.LENGTH_BYTES >= length) {
-               // skip over the length bytes
-               in.skip(PNPackets.LENGTH_BYTES);
+   /**
+    * Reads a packet given a {@link PNInputStreamReader}. Returns true if the packet is successfully read.
+    *
+    * @return Returns true if full packet is successfully read, false otherwise
+    * @throws IOException
+    * @throws IndexOutOfBoundsException
+    */
+   private boolean readPacket(PNInputStreamReader reader) throws IOException, IndexOutOfBoundsException {
+      int available = reader.available();
+      // parse from reader
+      if (available >= PNPackets.LENGTH_BYTES) {
+         int length = (in.peekU(0) << 24)
+            | (in.peekU(1) << 16)
+            | (in.peekU(2) << 8)
+            | in.peekU(3);
 
-               // if the packet has no ID, close the connection
-               if (length < PNPackets.ID_BYTES) {
-                  in.skip(length);
-                  PN.storeAndLogError(new RuntimeException("Missing packet ID"), this,
-                     "Failed to read packet ID! Closing connection.");
-                  close();
-               }
-               else {
+         // make sure we have parse the whole payload
+         if (available - PNPackets.LENGTH_BYTES >= length) {
+            // skip over the length bytes
+            in.skip(PNPackets.LENGTH_BYTES);
 
-                  // This is where we should tell the owner of the connection to "receive" the packet
-                  // That way, it's on the "connection owner" to parse the packet and handle it
-
-                  // For now we'll just read it here for testing
-                  try {
-                     // read the id
-                     short id = reader.readShort();
-                     if (id == PNPackets.PING_PACKET) {
-                        PNPingPacket packet = new PNPingPacket();
-                        packet.read(reader);
-
-                        PN.info("Received PING!");
-                        for (int i = 0; i < packet.dates.size(); i++) {
-                           PN.info(PN.toISO(packet.dates.get(i)));
-                        }
-
-                        synchronized (out.getBufferLock()) {
-                           PNPongPacket response = new PNPongPacket();
-                           response.date = new Date();
-                           response.write(writer);
-                        }
-                     }
-                     else if (id == PNPackets.PONG_PACKET) {
-                        PNPongPacket packet = new PNPongPacket();
-                        packet.read(reader);
-                        PN.info("Received PONG: " + packet.date);
-                     }
-                  }
-                  catch (IOException e) {
-                     // TODO
-                     // "connection owner" needs to handle this
-                     PN.storeAndLogError(e, this, "Failed to process data due to IOException! Closing connection.");
-                     close();
-                  }
-                  catch (IndexOutOfBoundsException e) {
-                     // TODO
-                     // "connection owner" needs to handle this
-                     PN.storeAndLogError(e, this, "Failed to process data due to malformed data! Closing connection.");
-                     close();
-                  }
-                  catch (Exception e) {
-                     // TODO
-                     // "connection owner" needs to handle this
-                     PN.storeAndLogError(e, this, "Failed to process data for unexpected reason! Closing connection.");
-                     close();
-                  }
-               }
+            // if the packet has no ID, close the connection
+            if (length < PNPackets.ID_BYTES) {
+               in.skip(length);
+               PN.storeAndLogError(new RuntimeException("Missing packet ID"), this,
+                  "Failed to parse packet ID! Closing connection.");
+               close();
+            }
+            else {
+               this.receivePacket(reader.readShort(), reader);
+               return true;
             }
          }
       }
+      return false;
+   }
 
-      synchronized (out.getBufferLock()) {
-         // write to writer
+   public synchronized void receivePacket(short packetId, PNInputStreamReader reader) {
+      synchronized (in.getBufferLock()) {
+         if (this.packetReceiver != null) {
+            this.packetReceiver.receivePacket(packetId, reader);
+         }
       }
+   }
+
+   public synchronized boolean sendPacket(PNPacket packet) {
+      return out.write(packet, this.writer);
    }
 
    private synchronized void onInputStreamClosed() {
@@ -217,25 +212,50 @@ public class PNConnection implements PNErrorStorable {
       this.close();
    }
 
-   public synchronized PNAsyncBufferedInputStream getInputStream() {
+   public PNAsyncBufferedInputStream getInputStream() {
       return this.in;
    }
 
-   public synchronized PNPacketOutputStream getOutputStream() {
+   public PNPacketOutputStream getOutputStream() {
       return this.out;
    }
 
-   public synchronized PNInputStreamReader<PNAsyncBufferedInputStream> getReader() {
+   public PNInputStreamReader getReader() {
       return this.reader;
    }
 
-   public synchronized PNOutputStreamWriter<PNPacketOutputStream> getWriter() {
+   public PNOutputStreamWriter getWriter() {
       return this.writer;
    }
 
+   public synchronized int getPort() {
+      return this.socket.getPort();
+   }
+
+   public synchronized String getHost() {
+      return this.socket.getInetAddress().getHostName();
+   }
+
    @Override
-   public PNErrorStorage getErrorStorage() {
+   public synchronized PNErrorStorage getErrorStorage() {
       return this.errorStorage;
+   }
+
+   public synchronized boolean didDisconnectSelf() {
+      return this.disconnectedSelf;
+   }
+
+   public synchronized boolean disconnect() {
+      synchronized (closeLock) {
+         if (isClosed()) {
+            return false;
+         }
+         if (isConnected()) {    // this checks the underlying socket
+            disconnectedSelf = true;
+         }
+         close();
+         return disconnectedSelf;
+      }
    }
 
    public boolean isClosed() {
@@ -246,21 +266,33 @@ public class PNConnection implements PNErrorStorable {
 
    public synchronized boolean isConnected() {
       if (socket == null) return false;
-      return socket.isConnected() && !socket.isClosed();
+      return !isClosed() && socket.isConnected() && !socket.isClosed();
    }
 
-   public synchronized void close() {
+   public void close() {
       synchronized (closeLock) {
          if (this.isClosed()) return;
          this.closed = true;
+      }
 
+      synchronized (this) {
          PN.info(this, "[CLOSE " + this + "] Closing connection...");
 
-         PN.info(this, "[CLOSE " + this + "] Closing reader...");
-         this.in.close(false);
+         PN.info(this, "[CLOSE " + this + "] Closing input...");
+         try {
+            this.in.close(false);
+         }
+         catch (Exception e) {
+            PN.error(e, "FAILED TO CLOSE INPUT");
+         }
 
-         PN.info(this, "[CLOSE " + this + "] Closing writer...");
-         this.out.close(false);
+         PN.info(this, "[CLOSE " + this + "] Closing output...");
+         try {
+            this.out.close(false);
+         }
+         catch (Exception e) {
+            PN.error(e, "FAILED TO CLOSE OUTPUT");
+         }
 
          PN.info(this, "[CLOSE " + this + "] Closing socket...");
          try {
@@ -274,44 +306,49 @@ public class PNConnection implements PNErrorStorable {
       }
    }
 
+   public ConnectionId getId() {
+      return this.id;
+   }
+
    @Override
    public String toString() {
       synchronized (this) {
          boolean closed = isClosed();
          PNError error = this.getErrorStorage().getTopError();
-         return "PNConnection[" + id + " " + socket + " closed=" + closed + (error != null ? " " + error : "") + "]";
+         return "PNConnection[id=" + id.data + ", host=" + getHost() + ":" + getPort() + ", "
+            + (closed == true ? "closed" : "open") + (error != null ? ", ERROR" : "") + "]";
       }
    }
 
-   public static class ConnectionID {
-      private static long nextID = 0;
+   public static class ConnectionId {
+      private static long nextId = 0;
 
       private long data = 0;
 
-      private ConnectionID() {
+      private ConnectionId() {
       }
 
       public long getData() {
          return this.data;
       }
 
-      private synchronized static ConnectionID next() {
-         ConnectionID id = new ConnectionID();
-         nextID++;
-         id.data = nextID;
+      private synchronized static ConnectionId next() {
+         ConnectionId id = new ConnectionId();
+         nextId++;
+         id.data = nextId;
          return id;
       }
 
       @Override
       public String toString() {
-         return "ConnID[" + this.getData() + "]";
+         return "ConnId[" + this.getData() + "]";
       }
 
       @Override
       public boolean equals(Object o) {
          if (this == o) return true;
          if (o == null || getClass() != o.getClass()) return false;
-         ConnectionID that = (ConnectionID)o;
+         ConnectionId that = (ConnectionId)o;
          return data == that.data;
       }
       @Override
@@ -353,7 +390,6 @@ public class PNConnection implements PNErrorStorable {
    public static class ServerSocketResolver implements PNErrorStorable {
 
       private ServerSocket serverSocket;
-      ;
       private PNErrorStorage errorStorage = new PNErrorStorage();
       private boolean success;
 
@@ -377,7 +413,7 @@ public class PNConnection implements PNErrorStorable {
 
       @Override
       public PNErrorStorage getErrorStorage() {
-         return null;
+         return this.errorStorage;
       }
    }
 

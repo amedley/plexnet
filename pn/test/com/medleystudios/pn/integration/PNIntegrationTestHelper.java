@@ -1,6 +1,6 @@
-package com.medleystudios.pn.test.integration;
+package com.medleystudios.pn.integration;
 
-import com.medleystudios.pn.test.PNTestHelper;
+import com.medleystudios.pn.PNTestHelper;
 
 public class PNIntegrationTestHelper {
 
