@@ -105,7 +105,7 @@ public class PNAcceptancePolicy implements PNPolicy {
          }
 
          // We need to handle when an error message happens, time = 0, or the packet message is incorrect...
-         // Maybye we can automate the error message check and time = 0 handler in a separate function???
+         // Maybe we can automate the error message check and time = 0 handler in a separate function???
          if (errorMessage != null) {
          }
 
